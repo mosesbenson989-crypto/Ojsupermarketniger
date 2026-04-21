@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O.J Supermarket Nigeria</title>
+
+<style>
+body { font-family: Arial; margin:0; background:#f5f5f5; }
+
+header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:red;
+  color:white;
+  padding:10px;
+}
+
+.search { width:50%; padding:8px; border:none; border-radius:5px; }
+.cart { cursor:pointer; }
+
+nav { background:white; text-align:center; padding:10px; }
+nav button { margin:5px; padding:8px; cursor:pointer; }
+
+.products {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  gap:15px;
+  padding:15px;
+}
+
+.card {
+  background:white;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+}
+
+.card img { width:100%; height:120px; object-fit:contain; }
+
+#cartBox {
+  position:fixed;
+  right:-300px;
+  top:0;
+  width:300px;
+  height:100%;
+  background:white;
+  padding:15px;
+  transition:0.3s;
+}
+
+#cartBox.active { right:0; }
+
+#dashboard { display:none; padding:20px; }
+
+.dash-box {
+  background:white;
+  padding:20px;
+  margin:10px;
+  border-radius:10px;
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h3>O.J Supermarket</h3>
+  <input class="search" placeholder="Search...">
+  <div class="cart" onclick="toggleCart()">🛒 <span id="count">0</span></div>
+</header>
+
+<nav>
+  <button onclick="showStore()">Store</button>
+  <button onclick="showDashboard()">Dashboard</button>
+</nav>
+
+<!-- STORE -->
+<div id="store">
+<div class="products">
+
+<div class="card">
+<img src="https://images.pexels.com/photos/160107/pexels-photo-160107.jpeg">
+<p>Maggi</p>
+<button onclick="add('Maggi')">Add to Cart</button>
+</div>
+
+<div class="card">
+<img src="https://images.pexels.com/photos/1079569/pexels-photo-1079569.jpeg">
+<p>Salt</p>
+<button onclick="add('Salt')">Add to Cart</button>
+</div>
+
+<div class="card">
+<img src="https://images.pexels.com/photos/450701/pexels-photo-450701.jpeg">
+<p>Detergent</p>
+<button onclick="add('Detergent')">Add to Cart</button>
+</div>
+
+</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+<div class="dash-box">
+<h2 id="orders">0</h2>
+<p>Total Orders</p>
+</div>
+
+<div class="dash-box">
+<h2 id="cartCount">0</h2>
+<p>Total Cart Adds</p>
+</div>
+
+<div class="dash-box">
+<h2 id="visits">0</h2>
+<p>Total Visits</p>
+</div>
+
+</div>
+
+<!-- CART -->
+<div id="cartBox">
+<h3>Your Cart</h3>
+<ul id="items"></ul>
+
+<p><b>Payment:</b><br>
+Union Bank<br>
+0068043392</p>
+
+<button onclick="clearCart()">Clear</button><br><br>
+
+<a id="orderBtn" href="https://wa.me/2348135323596" target="_blank">
+<button onclick="placeOrder()">Order via WhatsApp</button>
+</a>
+
+<p>Delivery Days: Mon, Wed, Sat</p>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC9PTPy6L8808v2H-16AUo_CaOomYkj_W0",
+  authDomain: "ojsupermarketnigeria.firebaseapp.com",
+  projectId: "ojsupermarketnigeria",
+  storageBucket: "ojsupermarketnigeria.firebasestorage.app",
+  messagingSenderId: "239039518447",
+  appId: "1:239039518447:web:f24d0164b37c363cdc2d1a",
+  measurementId: "G-JBVPT1NFDW"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let cart = [];
+
+/* ADD TO CART (REAL TRACKING) */
+function add(item){
+  cart.push(item);
+
+  db.collection("cartAdds").add({
+    item: item,
+    time: new Date()
+  });
+
+  update();
+}
+
+/* UPDATE CART */
+function update(){
+  document.getElementById("count").innerText = cart.length;
+
+  let list = document.getElementById("items");
+  list.innerHTML = "";
+
+  cart.forEach((item,i)=>{
+    list.innerHTML += `<li>${item} <button onclick="remove(${i})">x</button></li>`;
+  });
+
+  document.getElementById("orderBtn").href =
+  "https://wa.me/2348135323596?text=" +
+  encodeURIComponent("I want: " + cart.join(", "));
+}
+
+/* REMOVE ITEM */
+function remove(i){
+  cart.splice(i,1);
+  update();
+}
+
+/* CLEAR */
+function clearCart(){
+  cart=[];
+  update();
+}
+
+/* CART TOGGLE */
+function toggleCart(){
+  document.getElementById("cartBox").classList.toggle("active");
+}
+
+/* PLACE ORDER */
+function placeOrder(){
+  db.collection("orders").add({
+    items: cart,
+    time: new Date()
+  });
+}
+
+/* DASHBOARD */
+function showDashboard(){
+  document.getElementById("store").style.display="none";
+  document.getElementById("dashboard").style.display="block";
+  loadDashboard();
+}
+
+function showStore(){
+  document.getElementById("store").style.display="block";
+  document.getElementById("dashboard").style.display="none";
+}
+
+/* LOAD REAL DATA */
+function loadDashboard(){
+
+  db.collection("orders").get().then(snap=>{
+    document.getElementById("orders").innerText = snap.size;
+  });
+
+  db.collection("cartAdds").get().then(snap=>{
+    document.getElementById("cartCount").innerText = snap.size;
+  });
+
+  db.collection("visits").get().then(snap=>{
+    document.getElementById("visits").innerText = snap.size;
+  });
+}
+
+/* VISITS TRACK */
+db.collection("visits").add({
+  page:"store",
+  time:new Date()
+});
+</script>
+
+</body>
+</html>
